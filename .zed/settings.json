@@ -1,0 +1,5 @@
+{
+	"remove_trailing_whitespace_on_save": true,
+ "hard_tabs": true,
+	"show_whitespaces": "boundary",
+}

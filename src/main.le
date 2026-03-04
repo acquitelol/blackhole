@@ -1,0 +1,95 @@
+use std/prelude;
+use std/raylib;
+
+let WIDTH = 1000;
+let HEIGHT = 800;
+
+let c = Vector2::new(WIDTH, HEIGHT).scale(0.5);
+let G = 2000.0;
+let mass = 10_000.0;
+let eventRadius = 48.0;
+let stars = Array::with_capacity<Star>(40).filled();
+let size = 5;
+
+fn lerp(f32 a, f32 b, f32 t) {
+	return a + t * (b - a);
+}
+
+struct Star {
+	Vector2 pos,
+	Vector2 vel
+}
+
+fn Star::reset(Star *self) {
+	//self.pos = Vector2::new(rand::random(0, WIDTH), rand::random(0, HEIGHT));
+	//self.vel = Vector2::new(rand::random(-30, 30), rand::random(-30, 30));
+	x := rand::random(0, WIDTH);
+	y := rand::random(0, HEIGHT);
+
+	d := Vector2::new(x, y).sub(c);
+	angle := d.angle(Vector2::zero());
+	speed := math::sqrtf((G * mass) / d.length() + 0.01);
+
+	self.pos = Vector2::new(x, y);
+	self.vel = Vector2::new(
+		-math::sinf(angle + rand::random(-3, 3)) * speed,
+		math::cos(angle + rand::random(-3, 3)) * speed
+	);
+}
+
+fn init_stars() {
+	for star in stars.iter_ref() {
+		star.reset();
+	}
+}
+
+fn update_stars(f32 dt) {
+	for star in stars.iter_ref() {
+		d := c.sub(star.pos);
+		dist_sq := d.length_sq();
+		dist := math::sqrtf(dist_sq);
+
+		force := (G * mass) / dist_sq;
+		a := d.scale(force / dist);
+
+		star.vel = star.vel.add(a.scale(dt)).scale(0.9999);
+		star.pos = star.pos.add(star.vel.scale(dt));
+		if dist + size < eventRadius { star.reset(); }
+	}
+}
+
+fn draw_stars() {
+	for star in stars {
+		if star.pos.x >= 0 && star.pos.x < WIDTH &&
+			star.pos.y >= 0 && star.pos.y < HEIGHT {
+			r := lerp(WHITE.r, MAGENTA.r, math::clamp(star.vel.length() / 1000, 0, 1));
+			g := lerp(WHITE.g, MAGENTA.g, math::clamp(star.vel.length() / 1000, 0, 1));
+			b := lerp(WHITE.b, MAGENTA.b, math::clamp(star.vel.length() / 1000, 0, 1));
+			rl::draw_circle_v(star.pos, size, Color { r, g, b, a = 255 });
+		}
+	}
+}
+
+fn main() {
+	rand::seed(time(nil));
+	rl::init_window(WIDTH, HEIGHT, "Black Hole");
+	defer rl::close_window();
+
+	rl::set_target_fps(60);
+	init_stars();
+
+	while !rl::window_should_close() {
+		update_stars(rl::get_frame_time());
+
+		rl::begin_drawing();
+		rl::clear_background(BLACK);
+
+		draw_stars();
+
+		rl::draw_circle_v(c, eventRadius, BLACK);
+		rl::draw_circle_lines_v(c, eventRadius + 2, DARKGRAY);
+
+		rl::draw_fps(10, 10);
+		rl::end_drawing();
+	}
+}
