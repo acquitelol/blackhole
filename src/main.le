@@ -3,110 +3,41 @@ use std/raylib;
 
 let WIDTH = 1080;
 let HEIGHT = 720;
-
-let G = 2000.0;
-let MASS = 10_000.0;
 let EVENT_RADIUS = 48.0;
-let STAR_COUNT = WIDTH * HEIGHT / 5;
-
-struct Star {
-	Vector2 pos,
-	Vector2 vel,
-	Color color
-}
-
-let blackhole = Vector2::new(WIDTH, HEIGHT).scale(0.5);
-let stars = Array::with_capacity<Star>(STAR_COUNT).filled();
-let galaxy = rl::load_image("assets/milkyway.jpg");
-let texture: Texture;
-
-fn lerp(f32 a, f32 b, f32 t) {
-	return a + t * (b - a);
-}
-
-fn Star::reset(Star *self) {
-	x := rand::random(0, WIDTH - 1);
-	y := rand::random(0, HEIGHT - 1);
-
-	d := Vector2::new(x, y).sub(blackhole);
-	angle := math::atan2f(d.y, d.x);
-	speed := math::sqrtf((G * MASS) / d.length()) + 0.01;
-
-	self.pos = Vector2::new(x, y);
-	self.vel = Vector2::new(
-		-math::sinf(angle + rand::randomf(-0.15, 0.15)) * speed,
-		math::cos(angle + rand::randomf(-0.15, 0.15)) * speed
-	);
-
-	self.color = rl::get_image_color(galaxy, x, y);
-}
-
-fn init_stars() {
-	for star in stars.iter_ref() {
-		star.reset();
-	}
-}
-
-fn update_stars(f32 dt) {
-	for star in stars.iter_ref() {
-		d := blackhole.sub(star.pos);
-		dist_sq := d.length_sq();
-		dist := math::sqrtf(dist_sq);
-
-		force := (G * MASS) / (dist_sq + 0.01);
-		a := d.scale(force / dist);
-
-		star.vel = star.vel.add(a.scale(dt)).scale(0.9999);
-		star.pos = star.pos.add(star.vel.scale(dt));
-		if dist < EVENT_RADIUS { star.reset(); }
-	}
-}
-
-fn draw_stars() {
-	for star in stars {
-		if star.pos.x < 0 || star.pos.x >= WIDTH || star.pos.y < 0 || star.pos.y >= HEIGHT {
-			continue;
-		}
-
-		t := math::clamp(star.vel.length() / 1000, 0.0, 1.0);
-		t *= t;
-
-		r := lerp(star.color.r, 120, t);
-		g := lerp(star.color.g, 80, t);
-		b := lerp(star.color.b, 180, t);
-		//rl::draw_rectangle_v(star.pos, Vector2::from(SCALE), Color { r, g, b, a = 255 });
-		rl::draw_pixel_v(star.pos, Color { r, g, b, a = 255 });
-	}
-}
 
 fn main() {
-	rand::seed(time(nil));
 	rl::init_window(WIDTH, HEIGHT, "Black Hole");
 	defer rl::close_window();
 
+	blackhole := Vector2::new(WIDTH, HEIGHT).scale(0.5);
+	galaxy := rl::load_image("assets/milkyway.jpg");
 	rl::image_resize(&galaxy, WIDTH, HEIGHT);
-	texture = rl::load_texture_from_image(galaxy);
 
+	texture := rl::load_texture_from_image(galaxy);
+
+	lens_shader := rl::load_shader(nil, "src/blackhole.fs");
+	blackhole_loc  := rl::get_shader_location(lens_shader, "blackhole");
+	resolution_loc := rl::get_shader_location(lens_shader, "resolution");
+
+	rl::set_shader_value(lens_shader, resolution_loc, &blackhole.scale(2).x, ShaderUniformDataType::SHADER_UNIFORM_VEC2);
 	rl::set_target_fps(60);
-	init_stars();
 
 	while !rl::window_should_close() {
 		if rl::is_mouse_button_down(MouseButton::MOUSE_BUTTON_LEFT) {
 			blackhole = rl::get_mouse_position();
 		}
 
-		update_stars(rl::get_frame_time());
+		rl::set_shader_value(lens_shader, blackhole_loc, &blackhole.x, ShaderUniformDataType::SHADER_UNIFORM_VEC2);
 
 		rl::begin_drawing();
-		rl::draw_texture(texture, 0, 0, Color { r = 255, g = 255, b = 255, a = 25 });
 		rl::clear_background(BLACK);
-		//rl::draw_rectangle(0, 0, WIDTH, HEIGHT, Color { r = 0, g = 0, b = 0, a = 46 });
 
-		draw_stars();
+		rl::begin_shader_mode(lens_shader);
+		rl::draw_texture(texture, 0, 0, WHITE);
+		rl::end_shader_mode();
 
 		rl::draw_circle_v(blackhole, EVENT_RADIUS, BLACK);
 		rl::draw_circle_lines_v(blackhole, EVENT_RADIUS + 2, DARKGRAY);
-
 		rl::draw_fps(10, 10);
 		rl::end_drawing();
 	}
