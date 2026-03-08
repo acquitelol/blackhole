@@ -1,40 +1,44 @@
 use std/prelude;
 use std/raylib;
 
-let WIDTH = 1000;
-let HEIGHT = 800;
+let WIDTH = 1080;
+let HEIGHT = 720;
 
-let c = Vector2::new(WIDTH, HEIGHT).scale(0.5);
 let G = 2000.0;
-let mass = 10_000.0;
-let eventRadius = 48.0;
-let stars = Array::with_capacity<Star>(40).filled();
-let size = 5;
+let MASS = 10_000.0;
+let EVENT_RADIUS = 48.0;
+let STAR_COUNT = WIDTH * HEIGHT / 5;
+
+struct Star {
+	Vector2 pos,
+	Vector2 vel,
+	Color color
+}
+
+let blackhole = Vector2::new(WIDTH, HEIGHT).scale(0.5);
+let stars = Array::with_capacity<Star>(STAR_COUNT).filled();
+let galaxy = rl::load_image("assets/milkyway.jpg");
+let texture: Texture;
 
 fn lerp(f32 a, f32 b, f32 t) {
 	return a + t * (b - a);
 }
 
-struct Star {
-	Vector2 pos,
-	Vector2 vel
-}
-
 fn Star::reset(Star *self) {
-	//self.pos = Vector2::new(rand::random(0, WIDTH), rand::random(0, HEIGHT));
-	//self.vel = Vector2::new(rand::random(-30, 30), rand::random(-30, 30));
-	x := rand::random(0, WIDTH);
-	y := rand::random(0, HEIGHT);
+	x := rand::random(0, WIDTH - 1);
+	y := rand::random(0, HEIGHT - 1);
 
-	d := Vector2::new(x, y).sub(c);
-	angle := d.angle(Vector2::zero());
-	speed := math::sqrtf((G * mass) / d.length() + 0.01);
+	d := Vector2::new(x, y).sub(blackhole);
+	angle := math::atan2f(d.y, d.x);
+	speed := math::sqrtf((G * MASS) / d.length()) + 0.01;
 
 	self.pos = Vector2::new(x, y);
 	self.vel = Vector2::new(
-		-math::sinf(angle + rand::random(-3, 3)) * speed,
-		math::cos(angle + rand::random(-3, 3)) * speed
+		-math::sinf(angle + rand::randomf(-0.15, 0.15)) * speed,
+		math::cos(angle + rand::randomf(-0.15, 0.15)) * speed
 	);
+
+	self.color = rl::get_image_color(galaxy, x, y);
 }
 
 fn init_stars() {
@@ -45,28 +49,33 @@ fn init_stars() {
 
 fn update_stars(f32 dt) {
 	for star in stars.iter_ref() {
-		d := c.sub(star.pos);
+		d := blackhole.sub(star.pos);
 		dist_sq := d.length_sq();
 		dist := math::sqrtf(dist_sq);
 
-		force := (G * mass) / dist_sq;
+		force := (G * MASS) / (dist_sq + 0.01);
 		a := d.scale(force / dist);
 
 		star.vel = star.vel.add(a.scale(dt)).scale(0.9999);
 		star.pos = star.pos.add(star.vel.scale(dt));
-		if dist + size < eventRadius { star.reset(); }
+		if dist < EVENT_RADIUS { star.reset(); }
 	}
 }
 
 fn draw_stars() {
 	for star in stars {
-		if star.pos.x >= 0 && star.pos.x < WIDTH &&
-			star.pos.y >= 0 && star.pos.y < HEIGHT {
-			r := lerp(WHITE.r, MAGENTA.r, math::clamp(star.vel.length() / 1000, 0, 1));
-			g := lerp(WHITE.g, MAGENTA.g, math::clamp(star.vel.length() / 1000, 0, 1));
-			b := lerp(WHITE.b, MAGENTA.b, math::clamp(star.vel.length() / 1000, 0, 1));
-			rl::draw_circle_v(star.pos, size, Color { r, g, b, a = 255 });
+		if star.pos.x < 0 || star.pos.x >= WIDTH || star.pos.y < 0 || star.pos.y >= HEIGHT {
+			continue;
 		}
+
+		t := math::clamp(star.vel.length() / 1000, 0.0, 1.0);
+		t *= t;
+
+		r := lerp(star.color.r, 120, t);
+		g := lerp(star.color.g, 80, t);
+		b := lerp(star.color.b, 180, t);
+		//rl::draw_rectangle_v(star.pos, Vector2::from(SCALE), Color { r, g, b, a = 255 });
+		rl::draw_pixel_v(star.pos, Color { r, g, b, a = 255 });
 	}
 }
 
@@ -75,19 +84,28 @@ fn main() {
 	rl::init_window(WIDTH, HEIGHT, "Black Hole");
 	defer rl::close_window();
 
+	rl::image_resize(&galaxy, WIDTH, HEIGHT);
+	texture = rl::load_texture_from_image(galaxy);
+
 	rl::set_target_fps(60);
 	init_stars();
 
 	while !rl::window_should_close() {
+		if rl::is_mouse_button_down(MouseButton::MOUSE_BUTTON_LEFT) {
+			blackhole = rl::get_mouse_position();
+		}
+
 		update_stars(rl::get_frame_time());
 
 		rl::begin_drawing();
+		rl::draw_texture(texture, 0, 0, Color { r = 255, g = 255, b = 255, a = 25 });
 		rl::clear_background(BLACK);
+		//rl::draw_rectangle(0, 0, WIDTH, HEIGHT, Color { r = 0, g = 0, b = 0, a = 46 });
 
 		draw_stars();
 
-		rl::draw_circle_v(c, eventRadius, BLACK);
-		rl::draw_circle_lines_v(c, eventRadius + 2, DARKGRAY);
+		rl::draw_circle_v(blackhole, EVENT_RADIUS, BLACK);
+		rl::draw_circle_lines_v(blackhole, EVENT_RADIUS + 2, DARKGRAY);
 
 		rl::draw_fps(10, 10);
 		rl::end_drawing();
