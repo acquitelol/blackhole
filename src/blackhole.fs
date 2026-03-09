@@ -4,41 +4,84 @@ in vec2 fragTexCoord;
 out vec4 fragColor;
 
 uniform sampler2D texture0;
-
-uniform vec2 blackhole;
 uniform vec2 resolution;
-uniform float eventHorizon;
 
-const int RAY_STEPS = 300;
-const float MASS = 0.05;
+uniform vec3 camPos;
+uniform vec3 camTarget;
+uniform vec3 camUp;
+
+const float PI = 3.141592;
+const int RAY_STEPS = 500;
+const float STEP_SIZE = 0.02;
+
+const float SCALE = 1.5;
+const float MASS = 0.6 * SCALE;
+const float RADIUS = 0.35 * SCALE;
+
+const float DISK_INNER = RADIUS * SCALE;
+const float DISK_OUTER = RADIUS * PI * SCALE;
+const float DISK_BRIGHTNESS = 5.0;
+
+vec4 sampleBackground(vec3 dir) {
+	dir = normalize(dir);
+	float u = 0.5 + atan(dir.z, dir.x) / (2.0 * PI);
+	float v = 0.5 - asin(clamp(dir.y, -1.0, 1.0)) / PI;
+	return texture(texture0, vec2(u, v));
+}
 
 void main() {
-    float aspect = resolution.x / resolution.y;
+	vec2 uv = (fragTexCoord * 2.0 - 1.0) * vec2(resolution.x / resolution.y, 1.0);
 
-    vec2 rayPos = fragTexCoord * vec2(aspect, 1.0);
-    vec2 bhPos = (blackhole / resolution) * vec2(aspect, 1.0);
-    float horizon = eventHorizon / resolution.y;
+	vec3 forward = normalize(camTarget - camPos);
+	vec3 right = normalize(cross(forward, camUp));
+	vec3 up = cross(right, forward);
 
-    if (length(rayPos - bhPos) < horizon) {
-        fragColor = vec4(0.0);
-        return;
-    }
+	vec3 rayPos = camPos;
+	vec3 rayDir = normalize(forward + uv.x * right + uv.y * up);
 
-    vec2 pos = rayPos;
-    vec2 vel = vec2(0.0);
-    float stepSize = 1.0 / float(RAY_STEPS);
+	bool hitHorizon = false;
+	vec3 diskGlow = vec3(0.0);
+	float diskAlpha = 0.0;
+	float prevY = rayPos.y;
 
-    for (int i = 0; i < RAY_STEPS; i++) {
-        vec2 toBlackHole = bhPos - pos;
-        float depth = 0.5 - float(i) * stepSize;
-        float dist = sqrt(dot(toBlackHole, toBlackHole) + depth * depth);
+	for (int i = 0; i < RAY_STEPS; i++) {
+		float dist = length(rayPos);
+		if (dist < RADIUS) { hitHorizon = true; break; }
+		float currY = rayPos.y;
 
-        vec2 gravitationalPull = toBlackHole * (MASS / (dist * dist * dist));
-        vel += gravitationalPull * stepSize;
-        pos += vel * stepSize;
-    }
+		if (prevY * currY < 0.0) { // ray crossed y = 0 plane
+			float r = length(rayPos.xz);
 
-    vec2 lensedUV = pos / vec2(aspect, 1.0);
-    float edgeSoftness = smoothstep(horizon, horizon * 1.1, length(rayPos - bhPos));
-    fragColor = mix(vec4(0.0), texture(texture0, clamp(lensedUV, 0.0, 1.0)), edgeSoftness);
+			if (r > DISK_INNER && r < DISK_OUTER) {
+				float t = clamp((r - DISK_INNER) / (DISK_OUTER - DISK_INNER), 0.0, 1.0);
+				vec3 dc = mix(
+					mix(vec3(1.0, 0.95, 0.8), vec3(1.0, 0.5, 0.1), t),
+					vec3(0.4, 0.05, 0.0),
+					pow(t, 2.5)
+				);
+
+				float angle = atan(rayPos.z, rayPos.x);
+				float doppler = 0.55 + 0.45 * sin(angle);
+				dc *= doppler;
+
+				float contribution = (1.0 - t) * DISK_BRIGHTNESS * (1.0 - diskAlpha);
+				diskGlow += dc * contribution;
+				diskAlpha = min(diskAlpha + 0.7, 1.0);
+			}
+		}
+
+		prevY = currY;
+
+		// newtonian gravitational acceleration
+		// a = −GM * r / ∣r∣^3
+		vec3 grav = -rayPos * MASS / (dist * dist * dist);
+		rayDir += grav * STEP_SIZE;
+		rayPos += rayDir * STEP_SIZE;
+	}
+
+	if (hitHorizon) {
+		fragColor = vec4(diskGlow, 1.0);
+	} else {
+		fragColor = vec4(sampleBackground(rayDir).rgb + diskGlow, 1.0);
+	}
 }

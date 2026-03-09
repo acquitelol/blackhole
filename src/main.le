@@ -2,40 +2,63 @@ use std/prelude;
 use std/raylib;
 use shader;
 
-let WIDTH = 1080;
-let HEIGHT = 720;
-let EVENT_HORIZON = 48.0;
+let SCALE = 1;
+let WIDTH = 1280;
+let HEIGHT = 800;
 
 fn main() {
 	rl::init_window(WIDTH, HEIGHT, "Black Hole");
 	defer rl::close_window();
 
-	blackhole := Vector2::new(WIDTH, HEIGHT).scale(0.5);
+	camera := Camera3D {
+		position = Vector3::new(0, -0.4, 6),
+		target = Vector3::new(0, 0, 0),
+		up = Vector3::new(0, 1, 0),
+		fovy = 70.0,
+		projection = CameraProjection::CAMERA_PERSPECTIVE,
+	};
+
 	galaxy := rl::load_image("assets/milkyway.jpg");
-	rl::image_resize(&galaxy, WIDTH, HEIGHT);
-
+	rl::image_resize(&galaxy, WIDTH * SCALE, HEIGHT * SCALE);
 	texture := rl::load_texture_from_image(galaxy);
-	shader := rl::load_shader(nil, "src/blackhole.fs");
+	rl::set_texture_filter(texture, TextureFilter::TEXTURE_FILTER_TRILINEAR);
 
-	shader.set_value("resolution", &blackhole.scale(2));
-	shader.set_value("eventHorizon", &EVENT_HORIZON);
-	shader.set_value("blackhole", &blackhole);
+	target := rl::load_render_texture(WIDTH * SCALE, HEIGHT * SCALE);
+
+	shader := rl::load_shader(nil, "src/blackhole.fs");
+	shader.set_value("resolution", &Vector2::new(WIDTH * SCALE, HEIGHT * SCALE));
+	shader.set_value("camTarget", &camera.target);
+	shader.set_value("camUp", &camera.up);
 	rl::set_target_fps(60);
 
 	while !rl::window_should_close() {
-		if rl::is_mouse_button_down(MouseButton::MOUSE_BUTTON_LEFT) {
-			blackhole = rl::get_mouse_position();
-			shader.set_value("blackhole", &blackhole);
-		}
+		mode := rl::is_mouse_button_down(MouseButton::MOUSE_BUTTON_RIGHT)
+			? CameraMode::CAMERA_THIRD_PERSON
+			: CameraMode::CAMERA_ORBITAL;
+		rl::update_camera(#cast(Camera *, &camera), mode);
+		shader.set_value("camPos", &camera.position);
 
-		rl::begin_drawing();
-		rl::clear_background(BLACK);
-
+		rl::begin_texture_mode(target);
 		rl::begin_shader_mode(shader);
 		rl::draw_texture(texture, 0, 0, WHITE);
 		rl::end_shader_mode();
+		rl::end_texture_mode();
 
-		rl::draw_circle_lines_v(blackhole, EVENT_HORIZON, DARKGRAY);
+		rl::begin_drawing();
+		rl::draw_texture_pro(
+			target.texture,
+			Rectangle {
+				x = 0, y = 0,
+				width = WIDTH * SCALE,
+				height = -HEIGHT * SCALE
+			},
+			Rectangle {
+				x = 0, y = 0,
+				width = WIDTH,
+				height = HEIGHT
+			},
+			Vector2::zero(), 0, WHITE
+		);
 		rl::draw_fps(10, 10);
 		rl::end_drawing();
 	}
