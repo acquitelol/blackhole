@@ -1,9 +1,10 @@
 use std/prelude;
 use std/raylib;
+use shader;
 
 let WIDTH = 1080;
 let HEIGHT = 720;
-let EVENT_RADIUS = 48.0;
+let EVENT_HORIZON = 48.0;
 
 fn main() {
 	rl::init_window(WIDTH, HEIGHT, "Black Hole");
@@ -14,30 +15,27 @@ fn main() {
 	rl::image_resize(&galaxy, WIDTH, HEIGHT);
 
 	texture := rl::load_texture_from_image(galaxy);
+	shader := rl::load_shader(nil, "src/blackhole.fs");
 
-	lens_shader := rl::load_shader(nil, "src/blackhole.fs");
-	blackhole_loc  := rl::get_shader_location(lens_shader, "blackhole");
-	resolution_loc := rl::get_shader_location(lens_shader, "resolution");
-
-	rl::set_shader_value(lens_shader, resolution_loc, &blackhole.scale(2).x, ShaderUniformDataType::SHADER_UNIFORM_VEC2);
+	shader.set_value("resolution", &blackhole.scale(2));
+	shader.set_value("eventHorizon", &EVENT_HORIZON);
+	shader.set_value("blackhole", &blackhole);
 	rl::set_target_fps(60);
 
 	while !rl::window_should_close() {
 		if rl::is_mouse_button_down(MouseButton::MOUSE_BUTTON_LEFT) {
 			blackhole = rl::get_mouse_position();
+			shader.set_value("blackhole", &blackhole);
 		}
-
-		rl::set_shader_value(lens_shader, blackhole_loc, &blackhole.x, ShaderUniformDataType::SHADER_UNIFORM_VEC2);
 
 		rl::begin_drawing();
 		rl::clear_background(BLACK);
 
-		rl::begin_shader_mode(lens_shader);
+		rl::begin_shader_mode(shader);
 		rl::draw_texture(texture, 0, 0, WHITE);
 		rl::end_shader_mode();
 
-		rl::draw_circle_v(blackhole, EVENT_RADIUS, BLACK);
-		rl::draw_circle_lines_v(blackhole, EVENT_RADIUS + 2, DARKGRAY);
+		rl::draw_circle_lines_v(blackhole, EVENT_HORIZON, DARKGRAY);
 		rl::draw_fps(10, 10);
 		rl::end_drawing();
 	}
