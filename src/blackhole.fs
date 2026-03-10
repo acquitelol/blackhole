@@ -11,16 +11,21 @@ uniform vec3 camTarget;
 uniform vec3 camUp;
 
 const float PI = 3.141592;
-const int RAY_STEPS = 500;
-const float STEP_SIZE = 0.02;
+const int factor = 2;
+const int RAY_STEPS = 1000 / factor;
+const float STEP_SIZE = 0.01 * factor;
 
-const float SCALE = 1.5;
+const float SCALE = 2;
 const float MASS = 0.6 * SCALE;
 const float RADIUS = 0.35 * SCALE;
 
 const float DISK_INNER = RADIUS * SCALE;
 const float DISK_OUTER = RADIUS * PI * SCALE;
 const float DISK_BRIGHTNESS = 5.0;
+
+const float PHOTON_SPHERE_R  = RADIUS * 1.5;
+const float PHOTON_GLOW_WIDTH = RADIUS * 1;
+const float PHOTON_BRIGHTNESS = 1.5;
 
 vec4 sampleBackground(vec3 dir) {
 	dir = normalize(dir);
@@ -47,6 +52,18 @@ void main() {
 	for (int i = 0; i < RAY_STEPS; i++) {
 		float dist = length(rayPos);
 		if (dist < RADIUS) { hitHorizon = true; break; }
+
+		float photonDist = abs(dist - PHOTON_SPHERE_R);
+
+		if (photonDist < PHOTON_GLOW_WIDTH) {
+			float t = 1.0 - (photonDist / PHOTON_GLOW_WIDTH);
+			t = pow(t, 2.5);
+			float angle  = atan(rayPos.z, rayPos.x);
+			float doppler = 0.6 + 0.4 * sin(angle);
+			vec3 photonColor = vec3(0.8, 0.75, 0.7) * doppler;
+			diskGlow += photonColor * t * PHOTON_BRIGHTNESS * STEP_SIZE;
+		}
+
 		float currY = rayPos.y;
 
 		if (prevY * currY < 0.0) { // ray crossed y = 0 plane
@@ -59,6 +76,12 @@ void main() {
 					vec3(0.4, 0.05, 0.0),
 					pow(t, 2.5)
 				);
+				//
+				// vec3 dc = mix(
+				// 	mix(vec3(0.8, 0.6, 0.8), vec3(1.0, 0.5, 0.1), t),
+				// 	vec3(0.4, 0.05, 0.4),
+				// 	pow(t, 2.5)
+				// );
 
 				float angle = atan(rayPos.z, rayPos.x);
 				float doppler = 0.55 + 0.45 * sin(angle);
