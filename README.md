@@ -2,7 +2,24 @@
 
 ### A basic and simplified black hole simulation written in [Elle](https://github.com/acquitelol/elle) and [Raylib](https://github.com/raysan5/raylib)
 
-<img src="assets/out2.gif" />
+<div style="overflow-x: auto;">
+  <table>
+    <tr>
+      <td>
+        <div>
+          <img src="assets/out2.gif" />
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <div>
+          A visualization of the black hole
+        </div>
+      </td>
+    </tr>
+  </table>
+</div>
 
 ### ✩ _If you like this project, consider giving it a star!_ ✩
 
