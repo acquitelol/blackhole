@@ -11,7 +11,7 @@ fn main() {
 	defer rl::close_window();
 
 	camera := Camera3D {
-		position = Vector3::new(0, -0.4, 6),
+		position = Vector3::new(0, -2, 25),
 		target = Vector3::new(0, 0, 0),
 		up = Vector3::new(0, 1, 0),
 		fovy = 70.0,
@@ -42,6 +42,7 @@ fn main() {
 		rl::update_camera(#cast(Camera *, &camera), mode);
 		shader.set_value("camPos", &camera.position);
 
+		//$dbg(camera.position);
 		rl::begin_texture_mode(target);
 		rl::begin_shader_mode(shader);
 		rl::draw_texture(texture, 0, 0, WHITE);

@@ -11,13 +11,13 @@ uniform vec3 camTarget;
 uniform vec3 camUp;
 
 const float PI = 3.141592;
-const int factor = 2;
-const int RAY_STEPS = 1000 / factor;
+const int factor = 8;
+const int RAY_STEPS = 4000 / factor;
 const float STEP_SIZE = 0.01 * factor;
 
 const float SCALE = 2;
-const float MASS = 0.6 * SCALE;
-const float RADIUS = 0.35 * SCALE;
+const float MASS = 2 * SCALE;
+const float RADIUS = 1 * SCALE;
 
 const float DISK_INNER = RADIUS * SCALE;
 const float DISK_OUTER = RADIUS * PI * SCALE;
@@ -25,7 +25,7 @@ const float DISK_BRIGHTNESS = 5.0;
 
 const float PHOTON_SPHERE_R  = RADIUS * 1.5;
 const float PHOTON_GLOW_WIDTH = RADIUS * 1;
-const float PHOTON_BRIGHTNESS = 1.5;
+const float PHOTON_BRIGHTNESS = 0.5;
 
 vec4 sampleBackground(vec3 dir) {
 	dir = normalize(dir);
