@@ -31,6 +31,10 @@ fn main() {
 	shader.set_value("camUp", &camera.up);
 	rl::set_target_fps(60);
 
+	//frames := []Image;
+	//frame := 0;
+
+	//while frame < math::round(2 * PI / 0.5 * 60) + 2 {
 	while !rl::window_should_close() {
 		mode := rl::is_mouse_button_down(MouseButton::MOUSE_BUTTON_RIGHT)
 			? CameraMode::CAMERA_THIRD_PERSON
@@ -61,5 +65,20 @@ fn main() {
 		);
 		rl::draw_fps(10, 10);
 		rl::end_drawing();
+
+		//if frame > 2 {
+		//	image := rl::load_image_from_texture(target.texture);
+		//	frames.push(image);
+		//}
+
+		//frame += 1;
 	}
+
+	//for i, image in frames.iter().enumerate() {
+	//	rl::image_flip_vertical(&image);
+	//	rl::export_image(image, "output/{}.png".format(i));
+	//}
+
+	//libc::system("yes | ffmpeg -framerate 60 -i output/%d.png -vf \"palettegen\" palette.png");
+	//libc::system("yes | ffmpeg -framerate 60 -i output/%d.png -i palette.png -lavfi \"paletteuse\" out.gif");
 }

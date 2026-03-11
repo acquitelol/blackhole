@@ -2,6 +2,8 @@
 
 ### A basic and simplified black hole simulation written in [Elle](https://github.com/acquitelol/elle) and [Raylib](https://github.com/raysan5/raylib)
 
+<img src="assets/out2.gif" />
+
 ### ✩ _If you like this project, consider giving it a star!_ ✩
 
 ### ♡ **Why does this exist?**
