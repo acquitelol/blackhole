@@ -1,3 +1,4 @@
+use std/raylib;
 global pub;
 
 fn `Shader.set_value.0.10.1`(Shader *self, string name, bool *value) {
