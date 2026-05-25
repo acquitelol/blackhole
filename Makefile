@@ -1,5 +1,12 @@
-build:
-	ellec src/main.le -z -Wl,-rpath,$(HOME)/.local/lib -r -z -O3 -z -lraylib --nogc -o blackhole
+ELLE_LIBS ?= -lraylib -Wl,-rpath,$(HOME)/.local/lib
+ELLE_FLAGS ?= -o blackhole -t -r -z -O3 --nogc
 
-run: build
-	./blackhole
+default: blackhole
+
+.PHONY: run
+run: blackhole
+	./$<
+
+blackhole: src/main.le
+	ellec src/main.le $(ELLE_FLAGS) $(foreach L,$(ELLE_LIBS),-z $(L))
+

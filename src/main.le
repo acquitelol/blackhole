@@ -11,7 +11,7 @@ fn main() {
 	defer rl::close_window();
 
 	camera := Camera3D {
-		position = Vector3::new(0, -2, 25),
+		position = Vector3::new(0, -2, 20),
 		target = Vector3::new(0, 0, 0),
 		up = Vector3::new(0, 1, 0),
 		fovy = 70.0,
